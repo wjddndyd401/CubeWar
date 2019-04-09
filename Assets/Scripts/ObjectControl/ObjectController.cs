@@ -28,7 +28,6 @@ public class ObjectController : MonoBehaviour
     public float bulletAngle;       // 투사체 각도
     public Splash splashType;       // 스플래시 종류 (없음, 직선형, 원형) 
     public float splashRange;       // 스플래시 범위
-    public GameObject deathEffect;  // 사망 이펙트
     public float effectSize;   // 이펙트 크기
     public Quaternion baseRotationAngle = Quaternion.Euler(0, 225, 0);  // 유닛의 기본 각도
 
@@ -44,7 +43,8 @@ public class ObjectController : MonoBehaviour
 
     protected bool isSelected;
     static Transform mTransform;
-    public string owner;
+    public string ownerName;
+    protected Player owner;
     private LineRenderer line;
     BoxCollider boxCollider;
 
@@ -153,11 +153,13 @@ public class ObjectController : MonoBehaviour
         onReceiveCommand = enable;
         if (enable)
         {
+            int commandIndex = 0;
+            while (commandList[commandIndex].info != Command.Info.None) commandIndex++;
+
+            if (Attackable() || IsUnit())
+                commandList[commandIndex++].info = Command.Info.Stop;
             if (Attackable())
-            {
-                commandList[1].info = Command.Info.Attack;
-                commandList[0].info = Command.Info.Stop;
-            }
+                commandList[commandIndex++].info = Command.Info.Attack;
         }
         else
         {
@@ -249,7 +251,7 @@ public class ObjectController : MonoBehaviour
                 for (int i = 0; i < muzzle.Count; i++)
                 {
                     GameObject newBullet = Instantiate(bullet, muzzle[i].position, Quaternion.identity);
-                    newBullet.GetComponent<Bullet>().SetBullet(targetForAttack, bulletSpeed, bulletAngle, muzzle[i].position, damage);
+                    newBullet.GetComponent<Bullet>().SetBullet(this, targetForAttack, bulletSpeed, bulletAngle, muzzle[i].position, damage);
                 }
             }
             else
@@ -312,13 +314,13 @@ public class ObjectController : MonoBehaviour
             Collider[] inSightUnits = Physics.OverlapCapsule(transform.position + capsuleheight, transform.position - capsuleheight, sight);
             List<ObjectController> inSightEnemys = new List<ObjectController>();
 
-            // 감지된 유닛들의 소유자를 검색하여 적군 여부 판별
+            // 감지된 유닛들의 소유자를 검색
             for (int i = 0; i < inSightUnits.Length; i++)
             {
                 ObjectController target = inSightUnits[i].GetComponent<ObjectController>();
                 if (target != null)
                 {
-                    string targetOwner = target.owner;
+                    Player targetOwner = target.owner;
 
                     // 타겟이 적군인지 확인 (중립이거나 같은 팀의 유닛이라면 적군이 아니다)
 
@@ -446,7 +448,7 @@ public class ObjectController : MonoBehaviour
             float x, z;
             float angle = 0;
 
-            line.material.color = Global.GetRelationColor(Global.Relation(Global.playerName, owner));
+            line.material.color = Global.GetRelationColor(Global.Relation(Global.gamePlayer, owner));
             line.positionCount = 21;
             for (int i = 0; i < 20 + 1; i++)
             {
@@ -469,7 +471,7 @@ public class ObjectController : MonoBehaviour
     }
 
     // 데미지 입음. HP 0 이하면 죽음.
-    public void TakeDamage(int receivedDamage)
+    public void TakeDamage(int receivedDamage, ObjectController attacker = null)
     {
         if (currentHitPoint > 0)
         {
@@ -480,6 +482,11 @@ public class ObjectController : MonoBehaviour
             if (currentHitPoint <= 0)
             {
                 ExplodeObject();
+            } else if(targetForForcedAttack == null && currentState != State.Moving && attacker != null && Global.Relation(owner, attacker.owner) == Team.Enemy && Attackable(attacker))
+            {
+                // 자신을 공격한 유닛을 쫓아가는 조건
+                // 강제 공격 중이 아닐 것, 이동 중이 아닐 것, 공격 대상이 존재할 것, 공격 대상이 적일 것, 공격 대상을 공격할 수 있을 것.
+                AttackMove(attacker.transform.position);
             }
         }
     }
@@ -492,11 +499,16 @@ public class ObjectController : MonoBehaviour
 
     public void ExplodeObject()
     {
+        GameObject deathEffect = Resources.Load("Effect/Death Particle") as GameObject;
         if (deathEffect != null)
         {
-            GameObject newEffect = Instantiate(deathEffect, transform.position, Quaternion.identity);
-            //if (particle != null) particle.SetSize(effectSize);
-            newEffect.transform.localScale *= effectSize;
+            for (int i = 0; i < 27; i++)
+            {
+                GameObject newEffect = Instantiate(deathEffect, transform.position, Quaternion.identity);
+                newEffect.transform.localScale *= boxCollider.size.magnitude / Mathf.Sqrt(3);
+                newEffect.GetComponent<Rigidbody>().AddForce(new Vector3(Random.Range(-1f, 1f), Random.Range(0f, 1f), Random.Range(-1f, 1f)) * 500);
+                newEffect.GetComponent<MeshRenderer>().material = GetComponentsInChildren<MeshRenderer>()[0].material;
+            }
         }
         Death(this);
     }
@@ -536,6 +548,23 @@ public class ObjectController : MonoBehaviour
     public virtual bool IsStructure()
     {
         return false;
+    }
+
+    public void SetOwner(Player owner)
+    {
+        this.owner = owner;
+        Transform underBuild = transform.Find("UnderBuildGraphic");
+        if(underBuild != null) underBuild.gameObject.SetActive(true);
+        foreach (MeshRenderer color in GetComponentsInChildren<MeshRenderer>())
+        {
+            color.material.color = owner.color;
+        }
+        if (underBuild != null) underBuild.gameObject.SetActive(false);
+    }
+
+    public Player GetOwner()
+    {
+        return owner;
     }
 
     public Team team;

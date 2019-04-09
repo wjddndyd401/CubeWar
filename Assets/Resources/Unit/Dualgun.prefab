@@ -225,13 +225,13 @@ MonoBehaviour:
   resource: 150
   produceTime: 10
   shortcut: 100
-  groundAttackable: 1
-  airAttackable: 1
+  groundAttackable: 0
+  airAttackable: 0
   damage: 5
   attackCooldown: 0.5
   startupTime: 0.1
   recoveryTime: 0.1
-  sight: 12
+  sight: 17
   armor: 1
   range: 7
   attackEffect: {fileID: 4896297279401523635, guid: 04104c0e1feb31c4c8fc0defe018ee8f,
@@ -243,13 +243,13 @@ MonoBehaviour:
   splashRange: 0
   deathEffect: {fileID: 100002, guid: e9c487cca3b046143b12eecc555482c0, type: 3}
   effectSize: 1.5
-  currentState: 0
-  owner: 
   baseRotationAngle: {x: 0, y: 0.92387956, z: 0, w: -0.3826834}
   isOnAir: 0
-  description: 
+  currentState: 0
+  ownerName: 
   onReceiveCommand: 1
   objectMakingPercentage: 0
+  team: 0
   speed: 15
   angularSpeed: 360
   nextPosition: {x: 0, y: 0, z: 0}

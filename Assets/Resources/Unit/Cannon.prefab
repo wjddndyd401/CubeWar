@@ -62,7 +62,7 @@ MonoBehaviour:
   attackCooldown: 0.7
   startupTime: 0.2
   recoveryTime: 0.2
-  sight: 12
+  sight: 13
   armor: 0
   range: 7
   attackEffect: {fileID: 4896297279401523635, guid: 04104c0e1feb31c4c8fc0defe018ee8f,
@@ -74,13 +74,13 @@ MonoBehaviour:
   splashRange: 0
   deathEffect: {fileID: 0}
   effectSize: 1.5
-  currentState: 0
-  owner: 
   baseRotationAngle: {x: 0, y: 0.92387956, z: 0, w: -0.3826834}
   isOnAir: 0
-  description: 
+  currentState: 0
+  ownerName: 
   onReceiveCommand: 1
   objectMakingPercentage: 0
+  team: 0
   speed: 10
   angularSpeed: 360
   nextPosition: {x: 0, y: 0, z: 0}

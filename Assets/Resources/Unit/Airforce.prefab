@@ -325,7 +325,7 @@ MonoBehaviour:
   attackCooldown: 1
   startupTime: 0.1
   recoveryTime: 0.1
-  sight: 10
+  sight: 20
   armor: 1
   range: 10
   attackEffect: {fileID: 6290637303896438291, guid: d0700092a74ec584ba5f62ec7d5809a9,
@@ -337,14 +337,13 @@ MonoBehaviour:
   splashRange: 0
   deathEffect: {fileID: 0}
   effectSize: 1
-  currentState: 0
-  owner: 
   baseRotationAngle: {x: 0, y: 0.92387956, z: 0, w: -0.3826834}
   isOnAir: 0
-  description: "\uC804\uCC9C\uD6C4 \uD3ED\uACA9\uAE30\uC785\uB2C8\uB2E4. \uC9C0\uC0C1
-    \uBC0F \uACF5\uC911 \uC720\uB2DB\uC744 \uACF5\uACA9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
+  currentState: 0
+  ownerName: 
   onReceiveCommand: 1
   objectMakingPercentage: 0
+  team: 0
   speed: 10
   angularSpeed: 360
 --- !u!65 &4086705619806886910

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using System.Diagnostics;
 
 public class GameManager : MonoBehaviour
 {
@@ -68,7 +67,7 @@ public class GameManager : MonoBehaviour
     bool onBuildCommand = false;
     Structure structureForBuild = null;
     GameObject buildCursor;
-    string ownerForBuild = null;
+    Player ownerForBuild = null;
     Vector3 positionDeviationForBuild = Vector3.zero;
     public GameObject underBuild;
 
@@ -86,20 +85,33 @@ public class GameManager : MonoBehaviour
 
         // 플레이어 설정
         playerNumber = 4;
-        Global.players = new List<string>();
-        Global.team = new List<List<string>>
+        Global.playerList = new List<Player>();
+        Global.teamList = new List<List<Player>>
         {
-            new List<string>()
+            new List<Player>()
         };
-        Global.players.Add("Enemy");
+        Player tempPlayer = new Player
+        {
+            name = "Enemy",
+            color = Color.black
+        };
+        Global.playerList.Add(tempPlayer);
         for (int i = 0; i < playerNumber; i++)
         {
-            Global.players.Add("Player" + (i + 1));
-            Global.team[0].Add("Player" + (i + 1));
+            tempPlayer = new Player
+            {
+                name = "Player" + (i + 1),
+                color = Color.red
+            };
+            Global.playerList.Add(tempPlayer);
+            Global.teamList[0].Add(tempPlayer);
         }
-        Global.team.Add(new List<string>());
-        Global.team[1].Add("Enemy");
-        Global.playerName = Global.players[1];
+        List<Player> tempList = new List<Player>
+        {
+            Global.playerList[0]
+        };
+        Global.teamList.Add(tempList);
+        Global.gamePlayer = Global.playerList[1];
 
         // objectControllers(씬에 존재하는 모든 선택가능 오브젝트 리스트) 초기화
         GameObject[] objectList = GameObject.FindGameObjectsWithTag("SelectableObject");
@@ -112,6 +124,7 @@ public class GameManager : MonoBehaviour
                 ((Structure)selectableObjects[i]).Produce += CreateObject;
                 ((Structure)selectableObjects[i]).Build += BuildStructure;
             }
+            selectableObjects[i].SetOwner(Global.FindPlayerWithName(selectableObjects[i].ownerName));
             AddOnMiniMap(selectableObjects[i]);
         }
     }
@@ -144,7 +157,7 @@ public class GameManager : MonoBehaviour
 
         StartCoroutine(PrintFrame());
 
-        CameraToLookPoint(map.transform.position);
+        CameraToLookPoint(transform.position);
     }
 
     bool isDragStartInUI = false;
@@ -234,7 +247,7 @@ public class GameManager : MonoBehaviour
                         if (preTarget != null && GetClickedObject() == preTarget && IsSelectable(preTarget))
                         {
                             // 단일 유닛 선택하기
-                            if (Input.GetKey(KeyCode.LeftControl)) SelectOnScreen(preTarget);
+                            if (Input.GetKey(KeyCode.LeftControl) && IsMine(preTarget)) SelectOnScreen(preTarget);
                             else
                             {
                                 if (Input.GetKey(KeyCode.LeftShift) && preTarget.IsSelected()) DeselectObject(preTarget);
@@ -286,7 +299,7 @@ public class GameManager : MonoBehaviour
                 {
                     // 적군 유닛 한정 강제 공격. 우클릭한 대상이 적군이 아니라면 마우스 위치로 이동한다.
                     ObjectController target = GetClickedObject();
-                    if (IsSelectable(target) && Global.Relation(Global.playerName, target.owner) == Team.Enemy)
+                    if (IsSelectable(target) && Global.Relation(Global.gamePlayer, target.GetOwner()) == Team.Enemy)
                     {
                         foreach (ObjectController obj in selectedObjects)
                         {
@@ -377,7 +390,7 @@ public class GameManager : MonoBehaviour
                 int blinkCycle = 10;
                 for (int i = 0; i < inBuildPosition.Length; i++)
                 {
-                    if (inBuildPosition[i].GetComponent<ObjectController>() != null)
+                    if (inBuildPosition[i].GetComponent<ObjectController>() != null || inBuildPosition[i].tag == "Terrian")
                     {
                         buildable = false;
                         SetBuildCursorAlpha(200 / (blinkCycle - 1) * (1 + Time.frameCount % blinkCycle));
@@ -390,7 +403,7 @@ public class GameManager : MonoBehaviour
                     if (buildable)
                     {
                         realResource -= structureForBuild.resource;
-                        CreateObject(1, buildPosition, structureForBuild, Global.playerName);
+                        CreateObject(1, buildPosition, structureForBuild, Global.gamePlayer);
                         onBuildCommand = false;
                     }
                     else
@@ -424,6 +437,10 @@ public class GameManager : MonoBehaviour
         {
             OnAttack(false);
         }
+        else
+        {
+            SetTopPriorityForProduce();
+        }       
     }
 
     IEnumerator PrintFrame()
@@ -542,15 +559,15 @@ public class GameManager : MonoBehaviour
      * 파라미터 hasRallyPoint : 생산 직후 향할 랠리 포인트의 존재 여부
      * 파라미터 rallyPoint : 랠리 포인트
      *********************************************************/
-    void CreateObject(int number, Vector3 position, ObjectController unit, string owner, bool hasRallyPoint = false, Vector3 rallyPoint = new Vector3())
+    void CreateObject(int number, Vector3 position, ObjectController unit, Player owner, bool hasRallyPoint = false, Vector3 rallyPoint = new Vector3())
     {
         for (int i = 0; i < number; i++)
         {
             GameObject newObject = Instantiate(unit.gameObject, position, Quaternion.identity);
             ObjectController objc = newObject.GetComponent<ObjectController>();
 
-            objc.owner = owner;
-            objc.team = Global.Relation(owner, Global.playerName);
+            objc.SetOwner(owner);
+            objc.team = Global.Relation(owner, Global.gamePlayer);
             objc.Death += DeleteDeathObject;
 
             if (!objc.IsUnit())
@@ -558,7 +575,7 @@ public class GameManager : MonoBehaviour
                 ((Structure)objc).Produce += CreateObject;
                 ((Structure)objc).CheckResource += CheckResource;
                 ((Structure)objc).Build += BuildStructure;
-                StartCoroutine(BuildStructureCoroutine(position, (Structure) objc, owner));
+                StartCoroutine(BuildStructureCoroutine(position, (Structure) objc, Global.gamePlayer));
             }
 
             selectableObjects.Add(objc);
@@ -583,7 +600,7 @@ public class GameManager : MonoBehaviour
      *********************************************************/
     void CheckResource(Unit unit, int resource, List<Unit> queue)
     {
-        if (realResource + resource < 0)
+        if (realResource + resource < 0 && unit != null && queue != null)
         {
             queue.Remove(unit);
             PrintMessage("자원이 부족합니다.");
@@ -615,7 +632,7 @@ public class GameManager : MonoBehaviour
      * 파라미터 structure : 건설할 건물
      * 파라미터 owner : 건설할 건물의 소유자
      *********************************************************/
-    void BuildStructure(Structure structure, string owner)
+    void BuildStructure(Structure structure, Player owner)
     {
         Destroy(buildCursor);
 
@@ -649,8 +666,9 @@ public class GameManager : MonoBehaviour
             MeshRenderer meshRenderer = child.gameObject.GetComponent<MeshRenderer>();
             if (meshRenderer != null)
             {
-                //meshRenderer.material.shader = Shader.Find("Transparent/Diffuse");
-                meshRenderer.material.color = new Color(meshRenderer.material.color.r, meshRenderer.material.color.g, meshRenderer.material.color.b, alpha / 255f);
+                Color color = meshRenderer.material.color;
+                meshRenderer.material.shader = Shader.Find("Transparent/Diffuse");
+                meshRenderer.material.color = new Color(color.r, color.g, color.b, alpha / 255f);
             }
         }
     }
@@ -659,7 +677,7 @@ public class GameManager : MonoBehaviour
      * 건물 건설 코루틴
      * 시간 만족 시 건물이 완성됨
      *********************************************************/
-    IEnumerator BuildStructureCoroutine(Vector3 position, Structure forBuild, string owner)
+    IEnumerator BuildStructureCoroutine(Vector3 position, Structure forBuild, Player owner)
     {
         float startBuildTime = Time.time;
         int maxHitPoint = forBuild.hitPoint;
@@ -672,7 +690,9 @@ public class GameManager : MonoBehaviour
 
         while (Time.time - startBuildTime < forBuild.produceTime)
         {
-            if (forBuild.IsSelected() && Input.GetKeyUp(KeyCode.Escape))
+            if (forBuild == null)
+                yield break;
+            if (forBuild.IsSelected() && selectedObjects.Count == 1 && Input.GetKeyUp(KeyCode.C))
             {
                 realResource += forBuild.resource;
                 forBuild.ExplodeObject();
@@ -712,7 +732,7 @@ public class GameManager : MonoBehaviour
                 {
                     cursorPosition = CursorPosition.OnMine;
                 }
-                else if (Global.Relation(unitBehindCursor.owner, Global.playerName) == Team.Enemy)
+                else if (Global.Relation(unitBehindCursor.GetOwner(), Global.gamePlayer) == Team.Enemy)
                 {
                     cursorPosition = CursorPosition.OnEnemy;
                 }
@@ -820,7 +840,7 @@ public class GameManager : MonoBehaviour
             ObjectController obj = hitColliders[i].collider.gameObject.GetComponent<ObjectController>();
             if (IsSelectable(obj))
             {
-                if (obj.owner == Global.playerName)
+                if (obj.GetOwner() == Global.gamePlayer)
                 {
                     selectMine = true;
                     if (obj.IsUnit())
@@ -861,7 +881,7 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < hitColliders.Length; i++)
         {
             ObjectController obj = hitColliders[i].collider.GetComponent<ObjectController>();
-            if (IsSelectable(obj) && obj.unitName.Equals(target.unitName))
+            if (IsSelectable(obj) && obj.unitName.Equals(target.unitName) && IsMine(obj))
             {
                 SelectObject(obj);
             }
@@ -884,6 +904,42 @@ public class GameManager : MonoBehaviour
         else
         {
             if (rallyPointInstance != null) Destroy(rallyPointInstance);
+        }
+    }
+
+    /**********************************************************
+     * 선택된 건물들의 생산 우선순위 설정
+     * 생산 대기 큐가 가장 짧은 건물이 최우선이다. (가장 먼저 생산)
+     * 직전에 최우선이었던 건물이 최하위다. (가장 먼저 취소)
+     *********************************************************/
+    void SetTopPriorityForProduce()
+    {
+        Structure topPriority = null;
+        Structure lastPriority = null;
+        int leastProducingCount = 0;
+        for (int i = 0; i < selectedObjects.Count; i++)
+        {
+            if (selectedObjects[i].IsStructure())
+            {
+                Structure str = (Structure)selectedObjects[i];
+
+                if (str.isTopPriority) lastPriority = str;
+                str.isTopPriority = false;
+
+                if (topPriority == null || leastProducingCount > str.ProducingUnitCount())
+                {
+                    topPriority = (Structure)selectedObjects[i];
+                    leastProducingCount = str.ProducingUnitCount();
+                }
+            }
+        }
+        if (topPriority != null)
+        {
+            if (lastPriority != null && topPriority != lastPriority)
+            {
+                lastPriority.isLastPriority = true;
+            }
+            topPriority.isTopPriority = true;
         }
     }
 
@@ -1026,7 +1082,7 @@ public class GameManager : MonoBehaviour
      *********************************************************/
     public static bool IsMine(ObjectController unit)
     {
-        if (unit != null && unit.owner == Global.playerName) return true;
+        if (unit != null && unit.GetOwner() == Global.gamePlayer) return true;
         else return false;
     }
 
@@ -1040,6 +1096,7 @@ public class GameManager : MonoBehaviour
     {
         if (selectedObjects.Count == 1)
         {
+            // 선택 유닛 1개
             selectedObjects[0].GetStatusForUI(out string unitName, out int hitPoint, out int currentHitPoint, out int damage, out int armor);
 
             thumbnail.gameObject.SetActive(true);
@@ -1057,6 +1114,7 @@ public class GameManager : MonoBehaviour
             Transform underBuildGraphic = selectedObjects[0].transform.Find("UnderBuildGraphic");
             if (!selectedObjects[0].IsStructure() || !underBuildGraphic.gameObject.activeSelf)
             {
+                // 건설중이지 않음
                 float produceProgress = 0;
                 List<Unit> list = null;
                 Structure selectedStructure = null;
@@ -1108,11 +1166,15 @@ public class GameManager : MonoBehaviour
                 }
             } else
             {
+                // 건설중임
                 producing.gameObject.SetActive(true);
                 produceProgressBar.value = selectedObjects[0].objectMakingPercentage;
                 producingGuide.text = "Constructing... (" + (int)(produceProgressBar.value * 100) + "%)";
                 produceList[0].gameObject.SetActive(true);
                 produceList[0].transform.GetChild(0).GetComponent<RawImage>().texture = selectedObjects[0].thumbnail;
+                Structure selectedStructure = (Structure)selectedObjects[0];
+                produceList[0].transform.GetChild(0).GetComponent<Button>().onClick.RemoveAllListeners();
+                produceList[0].transform.GetChild(0).GetComponent<Button>().onClick.AddListener(() => { realResource += selectedStructure.resource; selectedStructure.ExplodeObject(); });
                 for (int i = 1; i < produceList.Length; i++)
                 {
                     produceList[i].gameObject.SetActive(false);
@@ -1122,6 +1184,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
+            // 선택된 유닛 없거나 여럿
             thumbnail.gameObject.SetActive(false);
             name_UI.GetComponent<Text>().text = "";
             HP_UI.GetComponent<Text>().text = "";
@@ -1129,13 +1192,29 @@ public class GameManager : MonoBehaviour
             Status_UI.GetComponent<Text>().text = "";
             producing.gameObject.SetActive(false);
         }
-
+        
+        // 선택된 유닛 여럿
         for (int i = 0; i < unitList.Length; i++)
         {
             if (selectedObjects.Count != 1 && i < selectedObjects.Count)
             {
                 unitList[i].gameObject.SetActive(true);
                 unitList[i].transform.GetChild(0).GetComponent<RawImage>().texture = selectedObjects[i].thumbnail;
+                for (int j = 0; ; j++)
+                {
+                    Transform list = unitList[i].transform.Find("ProduceList" + j);
+                    if (list == null) break;
+                    list.gameObject.SetActive(false);
+                    if (selectedObjects[i].IsStructure())
+                    {
+                        Structure selectedStructure = (Structure)selectedObjects[i];
+                        if (j < selectedStructure.ProducingUnitCount())
+                        {
+                            list.gameObject.SetActive(true);
+                            list.GetComponent<RawImage>().texture = selectedStructure.GetProducingUnit(j).thumbnail;
+                        }
+                    }
+                }
             }
             else
             {
@@ -1149,9 +1228,16 @@ public class GameManager : MonoBehaviour
      * 선택된 유닛 모두가 갖고 있는 명령만 출력한다. (같은 명령은 같은 위치에 정렬 필요)
      * 변수 controlable : 적군 및 중립 유닛은 다중 선택이 불가하므로, 선택된 첫 번째 유닛이 자신 소유일때만 true
      *********************************************************/
+    GameObject preSelectedUnit = null;
     public void SetCommandWithSelectedUnit()
     {
+        // 선택 유닛이 바뀔 때만 갱신한다.
+        if (selectedObjects.Count > 0 && preSelectedUnit == selectedObjects[0].gameObject) return;
+        if (selectedObjects.Count > 0) preSelectedUnit = selectedObjects[0].gameObject;
+        else preSelectedUnit = null;
+
         bool controlable = selectedObjects.Count > 0 && IsMine(selectedObjects[0]);
+
         if (controlable)
         {
             // 첫 번째 유닛의 커맨드 정보 긁어옴
@@ -1174,7 +1260,11 @@ public class GameManager : MonoBehaviour
                 RawImage commandBg = commandImageList[i];
                 RawImage commandIcon = commandImageList[i].transform.GetChild(0).GetComponent<RawImage>();
                 Button commandButton = commandImageList[i].transform.GetChild(0).GetComponent<Button>();
-                if (commandList[i].info == Command.Info.None) commandIcon.gameObject.SetActive(false);
+                if (commandList[i].info == Command.Info.None)
+                {
+                    commandBg.GetComponent<CommandTextBox>().SetText("");
+                    commandIcon.gameObject.SetActive(false);
+                }
                 else
                 {
                     commandIcon.gameObject.SetActive(true);
@@ -1202,7 +1292,7 @@ public class GameManager : MonoBehaviour
                         commandIcon.texture = commandList[i].unit.thumbnail;
                         for (int j = 0; j < selectedObjects.Count; j++)
                         {
-                            if (IsMine(selectedObjects[j]) && selectedObjects[j].IsStructure())
+                            if (IsMine(selectedObjects[j]) && selectedObjects[j].IsStructure() && ((Structure)selectedObjects[j]).isTopPriority)
                             {
                                 Structure producer = (Structure)selectedObjects[j];
                                 Unit producedUnit = commandList[i].unit;
@@ -1250,7 +1340,7 @@ public class GameManager : MonoBehaviour
         pointOnMiniMap.transform.SetParent(minimap.transform);
 
         if (IsMine(target)) pointOnMiniMap.color = Color.green;
-        else if (Global.Relation(target.owner, Global.playerName) == Team.Enemy) pointOnMiniMap.color = Color.red;
+        else if (Global.Relation(target.GetOwner(), Global.gamePlayer) == Team.Enemy) pointOnMiniMap.color = Color.red;
         else pointOnMiniMap.color = Color.yellow;
 
         onMiniMap.Add(pointOnMiniMap);
@@ -1324,7 +1414,10 @@ public class GameManager : MonoBehaviour
 
         return CameraPositionIntoMap(point);
     }
-
+    
+    /**********************************************************
+     * 카메라가 특정 지점을 중심으로 비추도록 이동
+     *********************************************************/
     public void CameraToLookPoint(Vector3 point)
     {
         mCamera.transform.position = GetCameraPosition(point);

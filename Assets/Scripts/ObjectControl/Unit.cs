@@ -25,8 +25,12 @@ public class Unit : ObjectController
     {
         base.SetEnableCommand(enable);
 
-        if (enable && Attackable())
-            commandList[2].info = Command.Info.Hold;
+        if (enable)
+        {
+            int commandIndex = 0;
+            while (commandList[commandIndex].info != Command.Info.None) commandIndex++;
+            commandList[commandIndex].info = Command.Info.Hold;
+        }
     }
 
 

@@ -15,6 +15,7 @@ TagManager:
   - Wood
   - Ground
   - UI
+  - Terrian
   layers:
   - Default
   - TransparentFX

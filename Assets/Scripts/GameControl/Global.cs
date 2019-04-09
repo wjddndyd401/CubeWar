@@ -9,11 +9,12 @@ public static class Global
     public static Color myColor = Color.green;
     public static Color allyColor = Color.yellow;
     public static Color enemyColor = Color.red;
-    public static List<string> players;
-    public static List<List<string>> team;
     public static string playerName;
     public static readonly float uiWidthHeightRadio = Screen.width * 150f / 800f / Screen.height;
     public static readonly float AirUnitHeight = 6;
+    public static List<Player> playerList;
+    public static List<List<Player>> teamList;
+    public static Player gamePlayer;
 
     public static bool Equal(float a, float b)
     {
@@ -33,13 +34,13 @@ public static class Global
      * 두 플레이어의 관계 확인
      * 파라미터 a, b : 비교할 플레이어명
      *********************************************************/
-    public static Team Relation(string a, string b)
+    public static Team Relation(Player a, Player b)
     {
-        if (a == "" || b == "") return Team.Ally;
+        if (a == null || b == null) return Team.Ally;
         if (a == b) return Team.Mine;
-        for (int j = 0; j < team.Count; j++)
+        for (int j = 0; j < teamList.Count; j++)
         {
-            if (team[j].Contains(a) && team[j].Contains(b)) return Team.Ally;
+            if (teamList[j].Contains(a) && teamList[j].Contains(b)) return Team.Ally;
         }
         return Team.Enemy;
     }
@@ -58,6 +59,15 @@ public static class Global
 
         return (newA - newB).sqrMagnitude;
     }
+
+    public static Player FindPlayerWithName(string name)
+    {
+        for (int i = 0; i < playerList.Count; i++)
+        {
+            if (playerList[i].name == name) return playerList[i];
+        }
+        return null;
+    }
 }
 
 public enum Team { Mine, Enemy, Ally };
@@ -68,7 +78,6 @@ public class Command
     public Info info;
     public Unit unit;
     public Structure structure;
-    // Spell spell;
 
     public bool Equal(Command others)
     {
@@ -77,6 +86,12 @@ public class Command
         if (info == Info.Build && (structure.unitName == others.structure.unitName)) return false;
         return true;
     }
+}
+
+public class Player
+{
+    public string name;
+    public Color color;
 }
 
 public enum Splash { None, Straight, Circle };

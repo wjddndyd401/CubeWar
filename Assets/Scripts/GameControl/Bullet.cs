@@ -5,6 +5,7 @@ using UnityEngine;
 [RequireComponent (typeof(Rigidbody))]
 public class Bullet : MonoBehaviour
 {
+    ObjectController shooter;
     public GameObject collisionEffect;
     public float collisionScale;
     public GameObject particle;
@@ -76,7 +77,7 @@ public class Bullet : MonoBehaviour
     {
         if (target != null && col.gameObject == target.gameObject)
         {
-            target.TakeDamage(damage);
+            target.TakeDamage(damage, shooter);
             Explode();
         }
     }
@@ -91,15 +92,16 @@ public class Bullet : MonoBehaviour
     }
 
     // 초기값 설정. 투사체 생성시엔 반드시 이 메서드를 실행해야 한다.
-    public void SetBullet(ObjectController _target, float _xVelocity, float angle, Vector3 _startPosition, int _damage)
+    public void SetBullet(ObjectController shooter, ObjectController target, float xVelocity, float angle, Vector3 startPosition, int damage)
     {
-        target = _target;
-        startPosition = _startPosition;
+        this.shooter = shooter;
+        this.target = target;
+        this.startPosition = startPosition;
         destination = target.transform.position;
-        damage = _damage;
+        this.damage = damage;
 
         // 입력된 투사체 속력은 xz 평면에 적용하며, y축 속력은 각도와 xz 평면 속력을 이용해 계산한다.
-        xVelocity = _xVelocity;
+        this.xVelocity = xVelocity;
 
         // 입력된 각도에 공격 주체와 타겟의 각도를 더한다. 즉 입력 각도가 0이라면 투사체는 공격 주체로부터 타겟을 향해 직진.
         // 각도는 최대 75도까지만 가능

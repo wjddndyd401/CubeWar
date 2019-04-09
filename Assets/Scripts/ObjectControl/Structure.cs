@@ -7,14 +7,16 @@ using UnityEngine.AI;
 public class Structure : ObjectController
 {
     public Unit[] produceList;
-    public event System.Action<int, Vector3, ObjectController, string, bool, Vector3> Produce;
+    public event System.Action<int, Vector3, ObjectController, Player, bool, Vector3> Produce;
     List<Unit> producingQueue;
     public event System.Action<Unit, int, List<Unit>> CheckResource;
     readonly int maxProducingQueueSize = 5;
     float startProduceTime;
+    public bool isTopPriority;
+    public bool isLastPriority;
 
     public Structure[] buildList;
-    public event System.Action<Structure, string> Build;
+    public event System.Action<Structure, Player> Build;
 
     public Vector3 rallyPoint;
     public bool hasRallyPoint = false;
@@ -25,8 +27,6 @@ public class Structure : ObjectController
         base.Start();
 
         producingQueue = new List<Unit>();
-
-        transform.position = new Vector3(transform.position.x, GetComponent<BoxCollider>().size.y / 2, transform.position.z);
     }
 
     public override void SetEnableCommand(bool enable)
@@ -61,7 +61,7 @@ public class Structure : ObjectController
         base.Update();
         for (int i = 0; i < produceList.Length; i++)
         {
-            if (isSelected && onReceiveCommand && Input.GetKeyDown(produceList[i].shortcut))
+            if (isSelected && isTopPriority && onReceiveCommand && Input.GetKeyDown(produceList[i].shortcut))
             {
                 StartProduceSelectedUnit(produceList[i]);
             }
@@ -69,7 +69,7 @@ public class Structure : ObjectController
 
         for (int i = 0; i < buildList.Length; i++)
         {
-            if (isSelected && onReceiveCommand && Input.GetKeyDown(buildList[i].shortcut))
+            if (isSelected && isTopPriority && onReceiveCommand && Input.GetKeyDown(buildList[i].shortcut))
             {
                 BuildSelectedStructure(buildList[i]);
             }
@@ -144,6 +144,17 @@ public class Structure : ObjectController
         if (producingQueue.Count > 0) produceProgress = (Time.time - startProduceTime) / producingQueue[0].produceTime;
         else produceProgress = 0;
         list = producingQueue;
+    }
+
+    public Unit GetProducingUnit(int index)
+    {
+        if (index < producingQueue.Count) return producingQueue[index];
+        else return null;
+    }
+
+    public int ProducingUnitCount()
+    {
+        return producingQueue.Count;
     }
 
     public override bool IsStructure()
