@@ -16,8 +16,8 @@ public class Bullet : MonoBehaviour
     Vector3 destination;
 
     int damage;
-    public Splash splashType;
-    public float splashRange;
+    Splash splashType;
+    float splashRange;
 
     float launchedTime;
     float xVelocity, yVelocity;
@@ -38,11 +38,12 @@ public class Bullet : MonoBehaviour
 
         /* 곡사포 포물선 운동 처리 */
         // 평면(x, z축) 기준 남은 시간을 계산한다
-        float time = Vector2.Distance(new Vector2(transform.position.x, transform.position.z), new Vector2(destination.x, destination.z)) / xVelocity;
-        if (Mathf.Abs(time) < 0.01f)
+        float distance = Vector2.Distance(new Vector2(transform.position.x, transform.position.z), new Vector2(destination.x, destination.z));
+        if (Mathf.Abs(distance) < 0.3f)
         {
-            // 예외처리 : x, z 좌표가 목표와 일치하면 직선으로 목표로 향한다.
-            transform.position = Vector3.MoveTowards(transform.position, destination, xVelocity * Time.deltaTime);            
+            // x, z 좌표가 목표와 가까우면 직선으로 목표로 향한다.
+            if (transform.position.y < destination.y) transform.position = destination;
+            else transform.position = Vector3.MoveTowards(transform.position, destination, xVelocity * Time.deltaTime);            
         }
         else
         {
@@ -50,6 +51,7 @@ public class Bullet : MonoBehaviour
             Vector2 horizontalPosition = Vector2.MoveTowards(new Vector2(transform.position.x, transform.position.z), new Vector2(destination.x, destination.z), xVelocity * Time.deltaTime);
 
             // y축으론 남은 거리, 남은 시간, 현재 y축 기준 속도를 이용하여 수직방향 가속도를 계산한다. (가속도 기본 공식 s = vt + 1/2at^2 활용)
+            float time = distance / xVelocity;
             float accel = 2 * (transform.position.y - destination.y + time * yVelocity) / Mathf.Pow(time, 2);
 
             // 계산된 가속도만큼 y축 속력을 조절하고, xz축 속력과 같이 오브젝트 포지션에 적용한다.
@@ -62,13 +64,10 @@ public class Bullet : MonoBehaviour
         if (instParticle != null)
             instParticle.transform.position = transform.position;
 
-        // 충돌이 없더라도 목표 지점에 근접하면 투사체 파괴
-        if ((transform.position - destination).sqrMagnitude <= 0.01f)
+        // 타겟이 없으면 목표 지점에 근접해서 투사체 파괴
+        if (target == null && (transform.position - destination).sqrMagnitude <= 0.01f)
         {
-            if(target == null)
-            {
-                Explode();
-            }
+            Explode();
         }
     }
 
@@ -84,21 +83,40 @@ public class Bullet : MonoBehaviour
 
     private void Explode()
     {
+        // 스플래시 데미지
+        if(splashType == Splash.Circle)
+        {
+            Vector3 capsuleheight = new Vector3(0, Global.AirUnitHeight, splashRange);
+            Collider[] inSightUnits = Physics.OverlapCapsule(transform.position + capsuleheight, transform.position - capsuleheight, splashRange);
+            for(int i = 0; i < inSightUnits.Length; i++)
+            {
+                ObjectController inSightUnit = inSightUnits[i].GetComponent<ObjectController>();
+                if(inSightUnit != null)
+                {
+                    if(inSightUnit != target) inSightUnit.TakeDamage(damage / 2, shooter);
+                }
+            }
+        }
+
+        // 폭발 이펙트
         if (collisionEffect != null)
         {
             GameObject newEffect = Instantiate(collisionEffect, transform.position, Quaternion.identity);
         }
+
         Destroy(gameObject);
     }
 
     // 초기값 설정. 투사체 생성시엔 반드시 이 메서드를 실행해야 한다.
-    public void SetBullet(ObjectController shooter, ObjectController target, float xVelocity, float angle, Vector3 startPosition, int damage)
+    public void SetBullet(ObjectController shooter, ObjectController target, float xVelocity, float angle, Vector3 startPosition, int damage, Splash splashType, float splashRange)
     {
         this.shooter = shooter;
         this.target = target;
         this.startPosition = startPosition;
         destination = target.transform.position;
         this.damage = damage;
+        this.splashRange = splashRange;
+        this.splashType = splashType;
 
         // 입력된 투사체 속력은 xz 평면에 적용하며, y축 속력은 각도와 xz 평면 속력을 이용해 계산한다.
         this.xVelocity = xVelocity;

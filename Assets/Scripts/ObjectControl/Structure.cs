@@ -21,6 +21,11 @@ public class Structure : ObjectController
     public Vector3 rallyPoint;
     public bool hasRallyPoint = false;
 
+    private GameObject underBuildGraphic;
+    private GameObject graphic;
+
+    public int resourceSupplyPerSecond = 0;
+
     // Start is called before the first frame update
     protected override void Start()
     {
@@ -124,13 +129,17 @@ public class Structure : ObjectController
         }
     }
 
-    public void CancelLastProducing()
+    public bool CancelLastProducing()
     {
         if(producingQueue.Count > 0)
         {
             int index = producingQueue.Count - 1;
             CheckResource(producingQueue[index], producingQueue[index].resource, producingQueue);
             producingQueue.RemoveAt(index);
+            return true;
+        } else
+        {
+            return false;
         }
     }
 
@@ -160,5 +169,19 @@ public class Structure : ObjectController
     public override bool IsStructure()
     {
         return true;
+    }
+
+    public void SetBuildingGraphic()
+    {
+        if (underBuildGraphic == null) underBuildGraphic = transform.Find("UnderBuildGraphic").gameObject;
+        if (graphic == null) graphic = transform.Find("Graphic").gameObject;
+        underBuildGraphic.SetActive(true);
+        graphic.SetActive(false);
+    }
+
+    public void SetBuildCompleteGraphic()
+    {
+        underBuildGraphic.SetActive(false);
+        graphic.SetActive(true);
     }
 }

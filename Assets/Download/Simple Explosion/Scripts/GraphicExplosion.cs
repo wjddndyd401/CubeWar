@@ -7,6 +7,13 @@ public class GraphicExplosion : MonoBehaviour
     public float loopduration;
     private float ramptime = 0;
     private float alphatime = 1;
+
+    Renderer renderer2;
+
+    void Start()
+    {
+        renderer2 = GetComponent<Renderer>();
+    }
     void Update()
     {
         Destroy(gameObject, 7);
@@ -19,8 +26,8 @@ public class GraphicExplosion : MonoBehaviour
         r *= correction;
         g *= correction;
         b *= correction;
-        GetComponent<Renderer>().material.SetVector("_ChannelFactor", new Vector4(r, g, b, 0));
-        GetComponent<Renderer>().material.SetVector("_Range", new Vector4(ramptime, 0, 0, 0));
-        GetComponent<Renderer>().material.SetFloat("_ClipRange", alphatime);
+        renderer2.material.SetVector("_ChannelFactor", new Vector4(r, g, b, 0));
+        renderer2.material.SetVector("_Range", new Vector4(ramptime, 0, 0, 0));
+        renderer2.material.SetFloat("_ClipRange", alphatime);
     }
 }

@@ -266,8 +266,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   unitName: Command Center
   thumbnail: {fileID: 2800000, guid: 1a27f2961effe5744b1cacd790cf4ce8, type: 3}
-  hitPoint: 800
-  resource: 300
+  hitPoint: 3000
+  resource: 450
   produceTime: 40
   shortcut: 99
   groundAttackable: 0
@@ -285,7 +285,6 @@ MonoBehaviour:
   bulletAngle: 0
   splashType: 0
   splashRange: 0
-  deathEffect: {fileID: 106850, guid: 51fa901798e618c4ba6a3493479538fc, type: 3}
   effectSize: 1
   baseRotationAngle: {x: 0, y: 0.92387956, z: 0, w: -0.3826834}
   isOnAir: 0
@@ -298,10 +297,12 @@ MonoBehaviour:
   isTopPriority: 0
   isLastPriority: 0
   buildList:
+  - {fileID: 4430144635518940380, guid: b3272727d631a2441a5ebc86a1aa727a, type: 3}
   - {fileID: 6604621637581007061, guid: 6e94d2d6b0603b843a85ec85094bce07, type: 3}
   - {fileID: 8148663277062728650, guid: 9e42b4ae489f6ae4eb86acd239ba35bf, type: 3}
   rallyPoint: {x: 0, y: 0, z: 0}
   hasRallyPoint: 0
+  resourceSupplyPerSecond: 40
 --- !u!120 &3670492575093370995
 LineRenderer:
   m_ObjectHideFlags: 0

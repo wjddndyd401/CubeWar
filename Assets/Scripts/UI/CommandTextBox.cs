@@ -39,7 +39,7 @@ public class CommandTextBox : MonoBehaviour, IPointerEnterHandler, IPointerExitH
 
             if (commandTextBox.rectTransform.anchoredPosition.x + commandTextBox.rectTransform.sizeDelta.x / 2 > ((RectTransform)transform.parent.transform).sizeDelta.x / 2)
             {
-                commandTextBox.rectTransform.anchoredPosition = new Vector2(((RectTransform)transform.parent.transform).sizeDelta.x / 2 - commandTextBox.rectTransform.sizeDelta.x / 2, commandTextBox.rectTransform.anchoredPosition.y);
+                //commandTextBox.rectTransform.anchoredPosition = new Vector2(((RectTransform)transform.parent.transform).sizeDelta.x / 2 - commandTextBox.rectTransform.sizeDelta.x / 2, commandTextBox.rectTransform.anchoredPosition.y);
             }
         }
     }

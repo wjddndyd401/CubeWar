@@ -28,8 +28,8 @@ public class AirUnit : Unit
             if ((transform.position - airDestination).sqrMagnitude >= stoppingDistance * stoppingDistance)
             {
                 transform.position = Vector3.MoveTowards(transform.position, airDestination, speed * Time.deltaTime);
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(airDestination - transform.position), angularSpeed * Mathf.Deg2Rad * Time.deltaTime);
             }
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(airDestination - transform.position), angularSpeed * Mathf.Deg2Rad * Time.deltaTime);
         }
         else
         {
@@ -50,7 +50,7 @@ public class AirUnit : Unit
     protected override void MoveToPosition(Vector3 point)
     {
         base.MoveToPosition(point);
-
+       
         airDestination = new Vector3(point.x, Global.AirUnitHeight, point.z);
         remainingDistance = Vector3.Distance(transform.position, airDestination);
         isStopped = false;
@@ -78,8 +78,11 @@ public class AirUnit : Unit
 
     private void OnTriggerStay(Collider col)
     {
-        Vector3 evadeCollisionDistance = (transform.position - col.transform.position).normalized * 1f * Time.deltaTime;
-        evadeCollisionDistance.y = 0;
-        transform.position += evadeCollisionDistance;
+        if(col.CompareTag("SelectableObject"))
+        {
+            Vector3 evadeCollisionDistance = (transform.position - col.transform.position).normalized * 1f * Time.deltaTime;
+            evadeCollisionDistance.y = 0;
+            transform.position += evadeCollisionDistance;
+        }
     }
 }

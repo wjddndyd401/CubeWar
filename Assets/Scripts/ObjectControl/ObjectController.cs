@@ -112,6 +112,7 @@ public class ObjectController : MonoBehaviour
         SetSelected(false);
     }
 
+    float nextSearchEnemyTime = 0;
     protected virtual void Update()
     {
         mTransform = transform;
@@ -141,7 +142,11 @@ public class ObjectController : MonoBehaviour
                 if (currentState != State.Moving)
                 {
                     AfterTargetDeath();
-                    SearchEnemyForAttack();
+                    if (GameManager.progressTime >= nextSearchEnemyTime)
+                    {
+                        SearchEnemyForAttack();
+                        nextSearchEnemyTime = GameManager.progressTime + 0.3f;
+                    }
                 }
                 SetNextAttackStartTime(Time.time);
             }
@@ -227,12 +232,37 @@ public class ObjectController : MonoBehaviour
     public virtual void BeforeCommand()
     {
         // 모든 명령 실행 전 공통으로 하는 것들
+        nextSearchEnemyTime = GameManager.progressTime;
         targetForAttack = null;
         targetForForcedAttack = null;
     }
 
     //--------------------- 명령 이외의 것들 ---------------------
-    
+
+    void AttackTarget()
+    {
+        if (Attackable(targetForAttack))
+        {
+            // 사정거리 안이라면 공격!
+            // 유닛이 움직일 수 없는 상태(건물이거나 홀드 상태)일 때 사거리가 같은 유닛에게 일방적으로 맞지 않도록 사거리를 약간 늘린다
+            if (Global.SqrDistanceOfTwoUnit(targetForAttack, this) <= Mathf.Pow(range + (currentState == State.Hold || !IsUnit() ? 0.01f : 0), 2))
+            {
+                // 공격
+                StopMovingBeforeAutoAttack();
+                DamageToTarget();
+            }
+            else
+            {
+                if (GameManager.progressTime >= nextSearchEnemyTime)
+                {
+                    SearchEnemyForAttack();
+                    nextSearchEnemyTime = GameManager.progressTime + 0.3f;
+                }
+                MoveForAttackTarget();
+            }
+        }
+    }
+
     /**********************************************************
      * 목표 공격
      * 매 프레임마다 실행되며, 선딜인지 후딜인지 공격 대기 상태인지 판별하여 맞는 동작을 수행한다.
@@ -251,7 +281,7 @@ public class ObjectController : MonoBehaviour
                 for (int i = 0; i < muzzle.Count; i++)
                 {
                     GameObject newBullet = Instantiate(bullet, muzzle[i].position, Quaternion.identity);
-                    newBullet.GetComponent<Bullet>().SetBullet(this, targetForAttack, bulletSpeed, bulletAngle, muzzle[i].position, damage);
+                    newBullet.GetComponent<Bullet>().SetBullet(this, targetForAttack, bulletSpeed, bulletAngle, muzzle[i].position, damage, splashType, splashRange);
                 }
             }
             else
@@ -276,21 +306,22 @@ public class ObjectController : MonoBehaviour
         else if (Time.time < bulletLaunchTime)
         {
             // 선딜
-            isStartupFinish = false;
+            isStartupFinish = true;
         }
         else
         {
             // 선딜 끝났으니 공격준비
-            if (!isStartupFinish)
+            if (isStartupFinish)
             {
                 readyToFire = true;
             }
             // 공격은 한 번만 함
-            isStartupFinish = true;
+            isStartupFinish = false;
         }
 
         // 후딜
-        if (Time.time > endAttackTime)
+        // 선딜 종료 & 발사 준비 상태 아님 = 공격 완료 -> 후딜 체크 (후딜이 매우 짧을 경우 가끔 공격을 패스하는 현상 수정용)
+        if (!isStartupFinish && !readyToFire && Time.time > endAttackTime)
         {
             SetNextAttackStartTime(Time.time + attackCooldown);
         }
@@ -327,7 +358,7 @@ public class ObjectController : MonoBehaviour
                     // 적이면 공격
                     if (Global.Relation(owner, targetOwner) == Team.Enemy && Attackable(target))
                     {
-                        inSightEnemys.Add(inSightUnits[i].gameObject.GetComponent<ObjectController>());
+                        inSightEnemys.Add(target);
                     }
                 }
             }
@@ -342,24 +373,7 @@ public class ObjectController : MonoBehaviour
                 targetForAttack = null;
             }
         }
-    }
-
-    void AttackTarget()
-    {
-        if(Attackable(targetForAttack))
-        {
-            if (Global.SqrDistanceOfTwoUnit(targetForAttack, this) <= Mathf.Pow(range + (currentState == State.Hold || !IsUnit() ? 0.01f : 0), 2))
-            {
-                // 공격
-                StopMovingBeforeAutoAttack();
-                DamageToTarget();
-            }
-            else
-            {
-                SearchEnemyForAttack();
-                MoveForAttackTarget();
-            }
-        }
+        
     }
 
     /**********************************************************
@@ -482,10 +496,10 @@ public class ObjectController : MonoBehaviour
             if (currentHitPoint <= 0)
             {
                 ExplodeObject();
-            } else if(targetForForcedAttack == null && currentState != State.Moving && attacker != null && Global.Relation(owner, attacker.owner) == Team.Enemy && Attackable(attacker))
+            } else if(targetForAttack == null && (currentState == State.Patrol || currentState == State.Idle) && attacker != null && Global.Relation(owner, attacker.owner) == Team.Enemy && Attackable(attacker))
             {
                 // 자신을 공격한 유닛을 쫓아가는 조건
-                // 강제 공격 중이 아닐 것, 이동 중이 아닐 것, 공격 대상이 존재할 것, 공격 대상이 적일 것, 공격 대상을 공격할 수 있을 것.
+                // 현재 공격 중인 대상이 없을 것, 기본 또는 정찰 중일 것, 공격 대상이 존재할 것, 공격 대상이 적일 것, 공격 대상을 공격할 수 있을 것.
                 AttackMove(attacker.transform.position);
             }
         }
@@ -528,7 +542,7 @@ public class ObjectController : MonoBehaviour
         _name = unitName;
         _hitPoint = hitPoint;
         _currentHitPoint = currentHitPoint;
-        _damage = damage;
+        _damage = damage * muzzle.Count;
         _armor = armor;
     }
 

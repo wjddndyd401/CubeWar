@@ -57,7 +57,7 @@ GameObject:
   - component: {fileID: 2841472575315341736}
   - component: {fileID: 2841472575315341737}
   m_Layer: 8
-  m_Name: Cube
+  m_Name: Terrian
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 1
@@ -106,7 +106,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 5b1dbd8738bc7784c96433ae1da913f2, type: 2}
+  - {fileID: 2100000, guid: b5f0433778daa3c42ba6e4de601548d0, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

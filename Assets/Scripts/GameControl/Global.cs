@@ -6,15 +6,15 @@ public static class Global
 {
     public static readonly Vector3 zeroVector3 = Vector3.zero;
     public static readonly int mapBaseLossyScale = 10;
-    public static Color myColor = Color.green;
-    public static Color allyColor = Color.yellow;
-    public static Color enemyColor = Color.red;
-    public static string playerName;
+    public static readonly Color myColor = Color.green;
+    public static readonly Color allyColor = Color.yellow;
+    public static readonly Color enemyColor = Color.red;
     public static readonly float uiWidthHeightRadio = Screen.width * 150f / 800f / Screen.height;
     public static readonly float AirUnitHeight = 6;
     public static List<Player> playerList;
     public static List<List<Player>> teamList;
     public static Player gamePlayer;
+    public static Player enemyPlayer;
 
     public static bool Equal(float a, float b)
     {
@@ -53,6 +53,14 @@ public static class Global
     }
 
     public static float SqrDistanceOfTwoUnit(ObjectController a, ObjectController b)
+    {
+        Vector3 newA = new Vector3(a.transform.position.x, 0, a.transform.position.z);
+        Vector3 newB = new Vector3(b.transform.position.x, 0, b.transform.position.z);
+
+        return (newA - newB).sqrMagnitude;
+    }
+
+    public static float SqrDistanceOfTwoUnit(Collider a, Collider b)
     {
         Vector3 newA = new Vector3(a.transform.position.x, 0, a.transform.position.z);
         Vector3 newB = new Vector3(b.transform.position.x, 0, b.transform.position.z);

@@ -6,16 +6,16 @@ using UnityEngine.EventSystems;
 
 public class GameManager : MonoBehaviour
 {
-    List<ObjectController> selectableObjects = new List<ObjectController>();
-    List<ObjectController> selectedObjects = new List<ObjectController>();
+    public static List<ObjectController> selectableObjects;
+    List<ObjectController> selectedObjects;
     readonly int maxSelectedObjects = 16;
     List<RawImage> onMiniMap = new List<RawImage>();
     readonly int numberOfSpecificGroup = 10;
     List<ObjectController>[] specificGroup;
 
-    Vector3 preMousePosition = new Vector3();
-    Vector3 mousePosition = new Vector3();
-    ObjectController preTarget = null;
+    Vector3 preMousePosition;
+    Vector3 mousePosition;
+    ObjectController preTarget;
 
     public Texture2D defaultCursor;
     public Texture2D CursorOnMine;
@@ -50,7 +50,6 @@ public class GameManager : MonoBehaviour
     int resourceForPrint;
     public int startResource;
     float realResource;
-    public int chargeResourcePerSecond;
     public Slider resourceBar;
     public Text resourceGuide;
 
@@ -68,19 +67,37 @@ public class GameManager : MonoBehaviour
     Structure structureForBuild = null;
     GameObject buildCursor;
     Player ownerForBuild = null;
-    Vector3 positionDeviationForBuild = Vector3.zero;
-    public GameObject underBuild;
 
     public GameObject rallyPoint;
     GameObject rallyPointInstance;
 
+    public Text timeText;
     public Text frame;
+    public static float progressTime;
 
     public Text messageBox;
     IEnumerator printMessageCoroutine;
 
+    public Spawner[] spawners;
+
+    public GameMenu menu;
+    public static bool isGameOver;
+
     void Awake()
     {
+        selectableObjects = new List<ObjectController>();
+        progressTime = 0;
+        isGameOver = false;
+        
+        selectedObjects = new List<ObjectController>();
+        preMousePosition = new Vector3();
+        mousePosition = new Vector3();
+        preTarget = null;
+        onAttackCommand = false;
+        onBuildCommand = false;
+        structureForBuild = null;
+        ownerForBuild = null;
+
         mCamera = Camera.main;
 
         // 플레이어 설정
@@ -90,15 +107,15 @@ public class GameManager : MonoBehaviour
         {
             new List<Player>()
         };
-        Player tempPlayer = new Player
+        Global.enemyPlayer = new Player
         {
             name = "Enemy",
             color = Color.black
         };
-        Global.playerList.Add(tempPlayer);
+        Global.playerList.Add(Global.enemyPlayer);
         for (int i = 0; i < playerNumber; i++)
         {
-            tempPlayer = new Player
+            Player tempPlayer = new Player
             {
                 name = "Player" + (i + 1),
                 color = Color.red
@@ -158,6 +175,8 @@ public class GameManager : MonoBehaviour
         StartCoroutine(PrintFrame());
 
         CameraToLookPoint(transform.position);
+
+        Experiment();
     }
 
     bool isDragStartInUI = false;
@@ -167,20 +186,37 @@ public class GameManager : MonoBehaviour
         else cursorMode = CursorMode.Default;
         Cursor.visible = true;
 
-        // ESC 키 - 현재 동작 취소, 생산 취소 (건물 취소는 건물 건설 코루틴에서 함)
+        // ESC 키 - 현재 동작 취소, 생산 취소
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            if (onBuildCommand)
-                onBuildCommand = false;
-            else if (onAttackCommand)
-                onAttackCommand = false;
+            if (menu.isActiveAndEnabled)
+                menu.gameObject.SetActive(false);
             else
             {
-                foreach (ObjectController obj in selectedObjects)
+                if (onBuildCommand)
+                    onBuildCommand = false;
+                else if (onAttackCommand)
+                    onAttackCommand = false;
+                else
                 {
-                    if (obj.IsStructure()) ((Structure)obj).CancelLastProducing();
+                    bool doAnything = false;
+                    if (selectedObjects.Count > 0)
+                    {
+                        foreach (ObjectController obj in selectedObjects)
+                        {
+                            // 선택된 건물들 중 명령을 수행하는 동작이 있으면 메뉴를 열지 않음
+                            if (obj.IsStructure() && ((Structure)obj).CancelLastProducing())
+                            {
+                                doAnything = true;
+                            }
+                        }
+                    }
+
+                    if (!doAnything)
+                        menu.gameObject.SetActive(true);
                 }
             }
+            
         }
 
         // 숫자 키 - 부대 선택
@@ -390,6 +426,8 @@ public class GameManager : MonoBehaviour
                 int blinkCycle = 10;
                 for (int i = 0; i < inBuildPosition.Length; i++)
                 {
+                    // 유닛 또는 지형과 충돌할 경우 건설 불가능
+                    // 절벽에는 콜라이더가 설치되어 있으므로 절벽 여부도 체크 가능
                     if (inBuildPosition[i].GetComponent<ObjectController>() != null || inBuildPosition[i].tag == "Terrian")
                     {
                         buildable = false;
@@ -426,8 +464,22 @@ public class GameManager : MonoBehaviour
         SetMousePosition();
         SetUIWithSelectedUnit();
         SetCommandWithSelectedUnit();
+        SpawnEnemy();
 
+        progressTime += Time.deltaTime;
+        timeText.text = (int)(progressTime / 60) + ":" + string.Format("{0:00}", (int)(progressTime % 60));
+
+        // 자신 소유의 자원공급 건물 개수에 따라 자원 충전량 변경
+        int chargeResourcePerSecond = 0;
+        for(int i = 0; i < selectableObjects.Count; i++)
+        {
+            if (selectableObjects[i].IsStructure() && selectableObjects[i].onReceiveCommand && selectableObjects[i].ownerName == Global.gamePlayer.name)
+            {
+                chargeResourcePerSecond += ((Structure) selectableObjects[i]).resourceSupplyPerSecond;
+            }
+        }
         realResource += chargeResourcePerSecond * Time.deltaTime;
+
         if (realResource > maxResource) realResource = maxResource;
         resourceBar.value = realResource / maxResource;
         resourceForPrint = (int)realResource;
@@ -440,7 +492,7 @@ public class GameManager : MonoBehaviour
         else
         {
             SetTopPriorityForProduce();
-        }       
+        }
     }
 
     IEnumerator PrintFrame()
@@ -563,7 +615,7 @@ public class GameManager : MonoBehaviour
     {
         for (int i = 0; i < number; i++)
         {
-            GameObject newObject = Instantiate(unit.gameObject, position, Quaternion.identity);
+            GameObject newObject = Instantiate(unit.gameObject, position + new Vector3(Random.Range(-0.1f, 0.1f), 0, Random.Range(-0.1f, 0.1f)), Quaternion.identity);
             ObjectController objc = newObject.GetComponent<ObjectController>();
 
             objc.SetOwner(owner);
@@ -575,7 +627,11 @@ public class GameManager : MonoBehaviour
                 ((Structure)objc).Produce += CreateObject;
                 ((Structure)objc).CheckResource += CheckResource;
                 ((Structure)objc).Build += BuildStructure;
-                StartCoroutine(BuildStructureCoroutine(position, (Structure) objc, Global.gamePlayer));
+            }
+
+            if (!objc.IsUnit())
+            {
+                StartCoroutine(BuildStructureCoroutine(position, (Structure)objc, Global.gamePlayer));
             }
 
             selectableObjects.Add(objc);
@@ -588,8 +644,10 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        if(unit.IsUnit())
+        if (unit.IsUnit() && owner == Global.gamePlayer)
             PrintMessage(unit.unitName + " 생산 완료");
+        else if (unit.IsUnit())
+            PrintMessage("적 공세가 출연했습니다");
     }
 
     /**********************************************************
@@ -622,6 +680,10 @@ public class GameManager : MonoBehaviour
             RemoveFromMiniMap(onMiniMap[selectableObjects.IndexOf(deathObject)]);
             selectableObjects.Remove(deathObject);
             selectedObjects.Remove(deathObject);
+            for(int i = 0; i < specificGroup.Length; i++)
+            {
+                specificGroup[i].Remove(deathObject);
+            }
             Destroy(deathObject.gameObject);
         }
     }
@@ -647,7 +709,7 @@ public class GameManager : MonoBehaviour
             ownerForBuild = owner;
             GameObject buildIcon = structure.transform.Find("Graphic").gameObject;
             buildCursor = Instantiate(buildIcon);
-            positionDeviationForBuild = buildIcon.transform.position;
+            buildCursorChildList = null;
 
             buildCursor.transform.rotation = structure.baseRotationAngle;
         }
@@ -657,18 +719,27 @@ public class GameManager : MonoBehaviour
      * 건물 건설 모드에서 건물 커서의 투명도 조절
      * 파라미터 alpha : 투명도
      *********************************************************/
+    Transform[] buildCursorChildList = null;
+    MeshRenderer[] meshRenderer = null;
     void SetBuildCursorAlpha(float alpha)
     {
-        Transform[] childList = buildCursor.GetComponentsInChildren<Transform>();
-        foreach (Transform child in childList)
+        if (buildCursorChildList == null)
         {
-            child.gameObject.layer = LayerMask.NameToLayer("Effect");
-            MeshRenderer meshRenderer = child.gameObject.GetComponent<MeshRenderer>();
-            if (meshRenderer != null)
+            buildCursorChildList = buildCursor.GetComponentsInChildren<Transform>();
+            meshRenderer = new MeshRenderer[buildCursorChildList.Length];
+            for (int i = 0; i < buildCursorChildList.Length; i++)
             {
-                Color color = meshRenderer.material.color;
-                meshRenderer.material.shader = Shader.Find("Transparent/Diffuse");
-                meshRenderer.material.color = new Color(color.r, color.g, color.b, alpha / 255f);
+                buildCursorChildList[i].gameObject.layer = LayerMask.NameToLayer("Effect");
+                meshRenderer[i] = buildCursorChildList[i].gameObject.GetComponent<MeshRenderer>();
+            }
+        }
+
+        for (int i = 0; i < buildCursorChildList.Length; i++)
+        {
+            if (meshRenderer[i] != null)
+            {
+                Color color = meshRenderer[i].material.color;
+                meshRenderer[i].material.color = new Color(color.r, color.g, color.b, alpha / 255f);
             }
         }
     }
@@ -683,10 +754,7 @@ public class GameManager : MonoBehaviour
         int maxHitPoint = forBuild.hitPoint;
         forBuild.onReceiveCommand = false;
 
-        GameObject underBuild = forBuild.transform.Find("UnderBuildGraphic").gameObject;
-        underBuild.SetActive(true);
-        GameObject afterFinish = forBuild.transform.Find("Graphic").gameObject;
-        afterFinish.SetActive(false);
+        forBuild.SetBuildingGraphic();
 
         while (Time.time - startBuildTime < forBuild.produceTime)
         {
@@ -705,8 +773,7 @@ public class GameManager : MonoBehaviour
         }
 
         forBuild.objectMakingPercentage = 1;
-        underBuild.SetActive(false);
-        afterFinish.SetActive(true);
+        forBuild.SetBuildCompleteGraphic();
         forBuild.SetHitPoint(maxHitPoint);
         forBuild.SetEnableCommand(true);
         PrintMessage(forBuild.unitName + " 건설 완료");
@@ -971,7 +1038,8 @@ public class GameManager : MonoBehaviour
 
         rect = SetRect(minimapController.GetMinimapPointFromWorldPoint(new Vector3(cameraLeft, 0, cameraTop)), minimapController.GetMinimapPointFromWorldPoint(new Vector3(cameraRight, 0, cameraBottom)));
 
-        DrawScreenRectBorder(rect, 2, new Color(1f, 1f, 1f));
+        if(!isGameOver)
+            DrawScreenRectBorder(rect, 2, new Color(1f, 1f, 1f));
     }
 
     /**********************************************************
@@ -1446,5 +1514,59 @@ public class GameManager : MonoBehaviour
         point.z = newZ;
 
         return point;
+    }
+
+    public void SpawnEnemy()
+    {
+        for(int i = 0; i < spawners.Length; i++)
+        {
+            if(spawners[i] != null && spawners[i].IsAboutTime(progressTime))
+            {
+                // 유닛 생성 및 어택땅
+                spawners[i].GetSpawnUnit(out Unit[] unit, out int[] number);
+                for(int j = 0; j < unit.Length; j++)
+                {
+                    CreateObject(number[j], spawners[i].transform.position, unit[j], Global.enemyPlayer, true, transform.position);
+                }
+                spawners[i].SetNextSpawn();
+            }
+        }
+    }
+
+    public void EnemyAttackToBase()
+    {
+        // 적군 유닛들 모두 기지로 어택
+    }
+
+    public static void DeActivateAllObjects()
+    {
+        for(int i = 0; i < selectableObjects.Count; i++)
+        {
+            selectableObjects[i].Stop();
+            selectableObjects[i].SetOwner(Global.playerList[2]);
+        }
+    }
+
+    public Spawner enemySpawner;
+    public Spawner mySpawner;
+    public void Experiment()
+    {
+        if(enemySpawner != null)
+        {
+            enemySpawner.GetSpawnUnit(out Unit[] unit, out int[] number);
+            for (int j = 0; j < unit.Length; j++)
+            {
+                CreateObject(number[j], enemySpawner.transform.position, unit[j], Global.enemyPlayer, true, mySpawner.transform.position);
+            }
+        }
+
+        if (mySpawner != null)
+        {
+            mySpawner.GetSpawnUnit(out Unit[] unit, out int[] number);
+            for (int j = 0; j < unit.Length; j++)
+            {
+                CreateObject(number[j], mySpawner.transform.position, unit[j], Global.gamePlayer, true, enemySpawner.transform.position);
+            }
+        }
     }
 }

@@ -29,15 +29,15 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5685586410534384038}
-  m_LocalRotation: {x: 0, y: 0.9238796, z: -0, w: -0.38268325}
-  m_LocalPosition: {x: 0, y: 0.5, z: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 5685586412215961330}
   - {fileID: 5685586411924718924}
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: 225, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4825194048391019197
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -52,19 +52,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   unitName: Cannon
   thumbnail: {fileID: 2800000, guid: 7fafbf39d668be5478fab631193fba82, type: 3}
-  hitPoint: 50
-  resource: 100
-  produceTime: 7
+  hitPoint: 80
+  resource: 60
+  produceTime: 9
   shortcut: 99
   groundAttackable: 1
   airAttackable: 1
-  damage: 6
-  attackCooldown: 0.7
+  damage: 12
+  attackCooldown: 0.5
   startupTime: 0.2
   recoveryTime: 0.2
   sight: 13
   armor: 0
-  range: 7
+  range: 8
   attackEffect: {fileID: 4896297279401523635, guid: 04104c0e1feb31c4c8fc0defe018ee8f,
     type: 3}
   bullet: {fileID: 4129911108108108761, guid: b86b7ad772b446e44a2c7be1a1d9b3b6, type: 3}
@@ -72,7 +72,6 @@ MonoBehaviour:
   bulletAngle: 0
   splashType: 0
   splashRange: 0
-  deathEffect: {fileID: 0}
   effectSize: 1.5
   baseRotationAngle: {x: 0, y: 0.92387956, z: 0, w: -0.3826834}
   isOnAir: 0
@@ -289,7 +288,7 @@ GameObject:
   - component: {fileID: 5685586411949923050}
   - component: {fileID: 5685586411949922965}
   m_Layer: 0
-  m_Name: Direction
+  m_Name: Barrel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

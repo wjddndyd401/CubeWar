@@ -422,9 +422,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   unitName: Barrack
   thumbnail: {fileID: 2800000, guid: 34ce220cb0e8d574e88346e2137a893d, type: 3}
-  hitPoint: 500
-  resource: 250
-  produceTime: 1
+  hitPoint: 1000
+  resource: 150
+  produceTime: 10
   shortcut: 98
   groundAttackable: 0
   airAttackable: 0
@@ -441,7 +441,6 @@ MonoBehaviour:
   bulletAngle: 0
   splashType: 0
   splashRange: 0
-  deathEffect: {fileID: 106850, guid: 51fa901798e618c4ba6a3493479538fc, type: 3}
   effectSize: 1
   baseRotationAngle: {x: 0, y: 0.92387956, z: 0, w: -0.3826834}
   isOnAir: 0
@@ -453,13 +452,17 @@ MonoBehaviour:
   produceList:
   - {fileID: 4825194048391019197, guid: 9772ba8906b9c644ebaac4ef155ef868, type: 3}
   - {fileID: 2005241942950229750, guid: c1af0b7997874844684b4a1487c7415a, type: 3}
-  - {fileID: 6173288090637563145, guid: ff9d4889d810ccb49bf696ca43659457, type: 3}
   - {fileID: 7133451416056367619, guid: abd40de536a560142bb13e1b5406291c, type: 3}
+  - {fileID: 886723865076661527, guid: 5d6a657a491621b46a6dce1fb199cd39, type: 3}
+  - {fileID: 6173288090637563145, guid: ff9d4889d810ccb49bf696ca43659457, type: 3}
+  - {fileID: 4548804155060782871, guid: d957c000372bb4d4d8bfd7acff7bb75f, type: 3}
+  - {fileID: 7389135669527951149, guid: 3b259f2317351a94082a0823e12e60c1, type: 3}
   isTopPriority: 0
   isLastPriority: 0
   buildList: []
   rallyPoint: {x: 0, y: 0, z: 0}
   hasRallyPoint: 0
+  resourceSupplyPerSecond: 0
 --- !u!120 &5108614240505554942
 LineRenderer:
   m_ObjectHideFlags: 0

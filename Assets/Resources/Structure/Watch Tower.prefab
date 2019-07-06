@@ -219,9 +219,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   unitName: Watch Tower
   thumbnail: {fileID: 2800000, guid: 09354d08c1fa84d4cb11f11c67a8037d, type: 3}
-  hitPoint: 250
-  resource: 150
-  produceTime: 25
+  hitPoint: 200
+  resource: 100
+  produceTime: 9
   shortcut: 116
   groundAttackable: 1
   airAttackable: 1
@@ -238,7 +238,6 @@ MonoBehaviour:
   bulletAngle: 0
   splashType: 0
   splashRange: 0
-  deathEffect: {fileID: 106850, guid: 51fa901798e618c4ba6a3493479538fc, type: 3}
   effectSize: 1
   baseRotationAngle: {x: 0, y: 0.92387956, z: 0, w: -0.3826834}
   isOnAir: 0
@@ -253,6 +252,7 @@ MonoBehaviour:
   buildList: []
   rallyPoint: {x: 0, y: 0, z: 0}
   hasRallyPoint: 0
+  resourceSupplyPerSecond: 0
 --- !u!120 &8058087974781803747
 LineRenderer:
   m_ObjectHideFlags: 0

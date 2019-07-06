@@ -116,7 +116,7 @@ public class GroundUnit : Unit
 
     public override void StopMovingBeforeAutoAttack()
     {
-        if(pathFinder.isActiveAndEnabled)
+        if (pathFinder.isActiveAndEnabled)
             pathFinder.ResetPath();
     }
 }

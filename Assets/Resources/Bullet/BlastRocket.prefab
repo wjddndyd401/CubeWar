@@ -116,8 +116,6 @@ MonoBehaviour:
   collisionScale: 0.5
   particle: {fileID: 5209083816092125683, guid: 1b21e39f2e33a1e40b2189af651b68c1,
     type: 3}
-  splashType: 0
-  splashRange: 0
 --- !u!64 &9077425430864853611
 MeshCollider:
   m_ObjectHideFlags: 0
